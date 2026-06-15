@@ -1,0 +1,43 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; background: #1a1a2e; color: #fff; }
+
+#lobby {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.85); z-index: 100;
+}
+.lobby-box {
+  background: #16213e; padding: 40px; border-radius: 12px;
+  text-align: center; min-width: 350px;
+  border: 1px solid #0f3460;
+}
+.lobby-box h1 { font-size: 2rem; margin-bottom: 8px; }
+.lobby-box p { color: #aaa; margin-bottom: 24px; }
+.form-group { margin-bottom: 16px; text-align: left; }
+.form-group label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 4px; }
+.form-group input {
+  width: 100%; padding: 10px; border: 1px solid #333; border-radius: 6px;
+  background: #0f3460; color: #fff; font-size: 1rem;
+}
+.form-group input:focus { outline: none; border-color: #e94560; }
+#joinBtn {
+  width: 100%; padding: 12px; background: #e94560; color: #fff;
+  border: none; border-radius: 6px; font-size: 1.1rem; cursor: pointer;
+  transition: background 0.2s;
+}
+#joinBtn:hover { background: #c73652; }
+#lobby-status { margin-top: 12px; font-size: 0.9rem; color: #f0c040; }
+
+#hud {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  display: flex; flex-wrap: wrap; gap: 12px;
+  padding: 10px 16px; background: rgba(0,0,0,0.7);
+  font-size: 0.85rem; align-items: center;
+}
+#score { color: #f0c040; font-weight: bold; font-size: 1rem; }
+#ingredients { display: flex; gap: 12px; }
+#customers { color: #64b5f6; }
+#controls-help { margin-left: auto; color: #aaa; font-size: 0.8rem; }
+
+#game-container { position: fixed; inset: 0; z-index: 0; }
+canvas { display: block; }
