@@ -1,7 +1,7 @@
 {
-  "name": "coffee-shop-coop",
-  "version": "1.0.0",
-  "description": "Co-op coffee shop game with 3D multiplayer",
+  "name": "coffee-shop-professional",
+  "version": "2.0.0",
+  "description": "Professional 3D Co-op Coffee Shop Game",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
@@ -9,10 +9,11 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.7.4",
-    "three": "^0.162.0"
+    "socket.io": "^4.7.5",
+    "three": "^0.170.0",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.1.0"
   }
 }
