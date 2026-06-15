@@ -3,49 +3,182 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>☕ Co-op Coffee Shop</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>☕ BrewCrew — Co-op Coffee Shop</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </head>
 <body>
   <!-- Lobby Screen -->
-  <div id="lobby">
-    <div class="lobby-box">
-      <h1>☕ Co-op Coffee Shop</h1>
-      <p>Work together to serve coffee in 3D!</p>
-      <div class="form-group">
-        <label>Your Name:</label>
-        <input type="text" id="playerName" placeholder="Barista" value="Barista" />
+  <div id="lobby" class="screen">
+    <div class="lobby-bg"></div>
+    <div class="lobby-content">
+      <div class="logo">
+        <span class="logo-icon">☕</span>
+        <h1>BrewCrew</h1>
+        <p class="tagline">Co-op Coffee Shop Experience</p>
       </div>
-      <div class="form-group">
-        <label>Room Code:</label>
-        <input type="text" id="roomCode" placeholder="room123" value="room123" />
+
+      <div class="lobby-card">
+        <div class="tabs">
+          <button class="tab active" data-tab="join">Join Game</button>
+          <button class="tab" data-tab="create">Create Room</button>
+        </div>
+
+        <div id="tab-join" class="tab-content active">
+          <div class="form-group">
+            <label>Your Name</label>
+            <input type="text" id="joinName" placeholder="Enter your name..." maxlength="16" />
+          </div>
+          <div class="form-group">
+            <label>Room Code</label>
+            <input type="text" id="joinCode" placeholder="Enter room code..." maxlength="10" />
+          </div>
+          <div class="form-group">
+            <label>Avatar</label>
+            <div class="avatar-selector" id="joinAvatar">
+              <div class="avatar-option active" data-idx="0">👨‍🍳</div>
+              <div class="avatar-option" data-idx="1">👩‍🍳</div>
+              <div class="avatar-option" data-idx="2">🧑‍💼</div>
+              <div class="avatar-option" data-idx="3">👨‍🎨</div>
+              <div class="avatar-option" data-idx="4">👩‍🔬</div>
+              <div class="avatar-option" data-idx="5">🧑‍🌾</div>
+              <div class="avatar-option" data-idx="6">👨‍🚀</div>
+              <div class="avatar-option" data-idx="7">👩‍🎤</div>
+            </div>
+          </div>
+          <button id="joinBtn" class="btn-primary">☕ Join Coffee Shop</button>
+        </div>
+
+        <div id="tab-create" class="tab-content">
+          <div class="form-group">
+            <label>Your Name</label>
+            <input type="text" id="createName" placeholder="Enter your name..." maxlength="16" />
+          </div>
+          <div class="form-group">
+            <label>Room Name</label>
+            <input type="text" id="createRoom" placeholder="My Coffee Shop" maxlength="20" />
+          </div>
+          <div class="form-group">
+            <label>Max Players</label>
+            <select id="createMax">
+              <option value="2">2 Players</option>
+              <option value="4" selected>4 Players</option>
+              <option value="6">6 Players</option>
+              <option value="8">8 Players</option>
+            </select>
+          </div>
+          <button id="createBtn" class="btn-primary">✨ Create New Shop</button>
+        </div>
+
+        <div id="lobbyError" class="error-msg"></div>
       </div>
-      <button id="joinBtn">Join / Create Room</button>
-      <div id="lobby-status"></div>
     </div>
   </div>
 
   <!-- Game HUD -->
-  <div id="hud" style="display:none;">
-    <div id="room-info">Room: <span id="roomDisplay"></span></div>
-    <div id="score">Score: <span id="scoreDisplay">0</span></div>
-    <div id="ingredients">
-      <span>☕ Beans: <span id="beansCount">10</span></span>
-      <span>🥛 Milk: <span id="milkCount">10</span></span>
-      <span>🍬 Sugar: <span id="sugarCount">10</span></span>
-      <span>🥤 Cups: <span id="cupsCount">20</span></span>
+  <div id="hud" class="hidden">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="room-badge">
+        <span>🏠</span>
+        <span id="roomDisplay">lobby</span>
+      </div>
+      <div class="game-timer">
+        <span id="timerDisplay">3:00</span>
+      </div>
+      <div class="score-display">
+        <span>⭐</span>
+        <span id="scoreDisplay">0</span>
+      </div>
+      <div class="money-display">
+        <span>💰</span>
+        <span id="moneyDisplay">$0</span>
+      </div>
+      <div class="day-phase">
+        <span id="phaseIcon">🌅</span>
+        <span id="phaseDisplay">Morning</span>
+      </div>
     </div>
-    <div id="customers">Customers: <span id="customerCount">0</span></div>
-    <div id="controls-help">
-      <b>WASD</b> Move &nbsp;|&nbsp; <b>E</b> Interact &nbsp;|&nbsp; <b>F</b> Serve
+
+    <!-- Inventory Bar -->
+    <div class="inventory-bar">
+      <div class="inv-item"><span>🫘</span><span id="invBeans">30</span></div>
+      <div class="inv-item"><span>🥛</span><span id="invMilk">30</span></div>
+      <div class="inv-item"><span>🍬</span><span id="invSugar">30</span></div>
+      <div class="inv-item"><span>🥤</span><span id="invCups">50</span></div>
+    </div>
+
+    <!-- Holding Indicator -->
+    <div id="holdingDisplay" class="holding-display hidden">
+      <span>✋ Holding:</span>
+      <span id="holdingItem">—</span>
+    </div>
+
+    <!-- Combo Popup -->
+    <div id="comboPopup" class="combo-popup hidden">🔥 x2 Combo!</div>
+
+    <!-- Controls -->
+    <div class="controls-hint">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move ·
+      <kbd>E</kbd> Interact ·
+      <kbd>F</kbd> Serve ·
+      <kbd>Q</kbd> Drop
     </div>
   </div>
 
-  <!-- Three.js canvas -->
+  <!-- Start Game Overlay -->
+  <div id="startOverlay" class="overlay hidden">
+    <div class="overlay-content">
+      <h2>👥 Players Ready</h2>
+      <div id="readyList"></div>
+      <button id="startBtn" class="btn-primary">▶ Start Game</button>
+      <p class="hint">All players need to press Ready in-game (R key)</p>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="gameOver" class="overlay hidden">
+    <div class="overlay-content">
+      <h1>☕ Game Over!</h1>
+      <div class="stats-grid">
+        <div class="stat">
+          <span class="stat-icon">⭐</span>
+          <span class="stat-value" id="finalScore">0</span>
+          <span class="stat-label">Total Score</span>
+        </div>
+        <div class="stat">
+          <span class="stat-icon">💰</span>
+          <span class="stat-value" id="finalMoney">$0</span>
+          <span class="stat-label">Earnings</span>
+        </div>
+        <div class="stat">
+          <span class="stat-icon">✅</span>
+          <span class="stat-value" id="finalServed">0</span>
+          <span class="stat-label">Orders Served</span>
+        </div>
+        <div class="stat">
+          <span class="stat-icon">🔥</span>
+          <span class="stat-value" id="finalCombo">0</span>
+          <span class="stat-label">Best Combo</span>
+        </div>
+      </div>
+      <button id="playAgainBtn" class="btn-primary">🔄 Play Again</button>
+    </div>
+  </div>
+
+  <!-- Game Canvas -->
   <div id="game-container"></div>
 
+  <!-- Scripts -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="client.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
