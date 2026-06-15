@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>☕ Co-op Coffee Shop</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Lobby Screen -->
+  <div id="lobby">
+    <div class="lobby-box">
+      <h1>☕ Co-op Coffee Shop</h1>
+      <p>Work together to serve coffee in 3D!</p>
+      <div class="form-group">
+        <label>Your Name:</label>
+        <input type="text" id="playerName" placeholder="Barista" value="Barista" />
+      </div>
+      <div class="form-group">
+        <label>Room Code:</label>
+        <input type="text" id="roomCode" placeholder="room123" value="room123" />
+      </div>
+      <button id="joinBtn">Join / Create Room</button>
+      <div id="lobby-status"></div>
+    </div>
+  </div>
+
+  <!-- Game HUD -->
+  <div id="hud" style="display:none;">
+    <div id="room-info">Room: <span id="roomDisplay"></span></div>
+    <div id="score">Score: <span id="scoreDisplay">0</span></div>
+    <div id="ingredients">
+      <span>☕ Beans: <span id="beansCount">10</span></span>
+      <span>🥛 Milk: <span id="milkCount">10</span></span>
+      <span>🍬 Sugar: <span id="sugarCount">10</span></span>
+      <span>🥤 Cups: <span id="cupsCount">20</span></span>
+    </div>
+    <div id="customers">Customers: <span id="customerCount">0</span></div>
+    <div id="controls-help">
+      <b>WASD</b> Move &nbsp;|&nbsp; <b>E</b> Interact &nbsp;|&nbsp; <b>F</b> Serve
+    </div>
+  </div>
+
+  <!-- Three.js canvas -->
+  <div id="game-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
