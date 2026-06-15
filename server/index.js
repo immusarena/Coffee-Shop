@@ -1,164 +1,173 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const GameState = require('./gameState');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const GameRoom = require('./GameRoom');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
+  pingInterval: 1000,
+  pingTimeout: 5000,
 });
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
-const gameState = new GameState();
+// Game state
+const gameRooms = new Map(); // roomId -> GameRoom
+const playerRoomMap = new Map(); // socketId -> roomId
 
-// Game tick loop — 20 ticks per second
-const TICK_RATE = 20;
-const TICK_INTERVAL = 1000 / TICK_RATE;
+// Game tick — 30 FPS authoritative server
+const TICK_RATE = 30;
+const TICK_MS = 1000 / TICK_RATE;
 
 setInterval(() => {
-  gameState.tick(1 / TICK_RATE);
-
-  // Broadcast state to all rooms
-  for (const [roomId, room] of gameState.rooms) {
-    const serialized = gameState.getSerializedState(roomId);
-    if (serialized) {
-      io.to(roomId).emit('gameState', serialized);
+  for (const [roomId, room] of gameRooms) {
+    if (room.isRunning) {
+      room.tick(1 / TICK_RATE);
+      const state = room.getState();
+      io.to(roomId).emit('game:tick', state);
     }
   }
-}, TICK_INTERVAL);
+}, TICK_MS);
 
 io.on('connection', (socket) => {
-  console.log(`Player connected: ${socket.id}`);
+  console.log(`[+] Player connected: ${socket.id}`);
 
-  let currentRoom = null;
-  let currentPlayerId = null;
+  socket.on('room:join', (data, callback) => {
+    try {
+      const { roomId, playerName, avatarIndex } = data;
+      const cleanRoomId = (roomId || '').trim().toLowerCase() || 'default';
+      const name = (playerName || '').trim() || `Barista_${Math.floor(Math.random() * 1000)}`;
+      const avatar = avatarIndex || Math.floor(Math.random() * 8);
 
-  // Join/create room
-  socket.on('joinRoom', ({ roomId, playerName }) => {
-    // Leave previous room
-    if (currentRoom) {
-      gameState.removePlayer(currentRoom, currentPlayerId);
-      socket.leave(currentRoom);
-      io.to(currentRoom).emit('playerLeft', { playerId: currentPlayerId });
-    }
+      // Leave any existing room
+      leaveCurrentRoom(socket);
 
-    // Ensure room exists
-    if (!gameState.getRoom(roomId)) {
-      gameState.createRoom(roomId);
-    }
+      // Get or create room
+      let room = gameRooms.get(cleanRoomId);
+      if (!room) {
+        room = new GameRoom(cleanRoomId);
+        gameRooms.set(cleanRoomId, room);
+        console.log(`[+] Room created: ${cleanRoomId}`);
+      }
 
-    currentRoom = roomId;
-    currentPlayerId = socket.id;
+      // Add player
+      const player = room.addPlayer(socket.id, name, avatar);
+      if (!player) {
+        if (callback) callback({ error: 'Room is full' });
+        return;
+      }
 
-    socket.join(roomId);
+      socket.join(cleanRoomId);
+      playerRoomMap.set(socket.id, cleanRoomId);
 
-    const player = gameState.addPlayer(roomId, socket.id, playerName || 'Barista');
-    if (!player) {
-      socket.emit('error', 'Could not join room');
-      return;
-    }
-
-    console.log(`${player.name} joined room ${roomId}`);
-
-    // Notify everyone
-    io.to(roomId).emit('playerJoined', {
-      playerId: socket.id,
-      player: { id: player.id, name: player.name, color: player.color },
-    });
-
-    // Send current state
-    socket.emit('roomJoined', {
-      roomId,
-      playerId: socket.id,
-      state: gameState.getSerializedState(roomId),
-    });
-  });
-
-  // Player movement
-  socket.on('playerMove', ({ x, z, rotation }) => {
-    if (currentRoom) {
-      gameState.updatePlayerPosition(currentRoom, socket.id, x, z, rotation);
-      socket.to(currentRoom).emit('playerMoved', {
-        playerId: socket.id, x, z, rotation,
+      // Notify others
+      socket.to(cleanRoomId).emit('player:joined', {
+        id: socket.id,
+        name: player.name,
+        avatar: player.avatar,
+        color: player.color,
       });
-    }
-  });
 
-  // Player action — interact with object
-  socket.on('playerAction', ({ action, data }) => {
-    if (!currentRoom) return;
+      console.log(`[+] ${name} joined room ${cleanRoomId}`);
 
-    switch (action) {
-      case 'startCoffee':
-        // Start coffee machine
-        const room = gameState.getRoom(currentRoom);
-        const machine = room?.coffeeMachines.find(m => m.id === data.machineId);
-        if (machine && !machine.busy) {
-          machine.busy = true;
-          machine.progress = 0;
-          io.to(currentRoom).emit('machineStarted', { machineId: data.machineId, playerId: socket.id });
-        }
-        break;
-
-      case 'serve':
-        const served = gameState.serveOrder(currentRoom, socket.id, data.coffeeType);
-        if (served) {
-          io.to(currentRoom).emit('orderServed', { playerId: socket.id, coffeeType: data.coffeeType });
-        }
-        break;
-
-      case 'pickup':
-        socket.to(currentRoom).emit('playerPickedUp', {
-          playerId: socket.id, item: data.item,
-        });
-        break;
-
-      case 'drop':
-        socket.to(currentRoom).emit('playerDropped', {
-          playerId: socket.id, item: data.item,
-        });
-        break;
-    }
-  });
-
-  // Start game
-  socket.on('startGame', () => {
-    if (currentRoom) {
-      const started = gameState.startGame(currentRoom);
-      if (started) {
-        io.to(currentRoom).emit('gameStarted');
-      }
-    }
-  });
-
-  // Player ready toggle
-  socket.on('toggleReady', () => {
-    if (currentRoom) {
-      const room = gameState.getRoom(currentRoom);
-      const player = room?.players.get(socket.id);
-      if (player) {
-        player.isReady = !player.isReady;
-        io.to(currentRoom).emit('playerReady', {
-          playerId: socket.id, isReady: player.isReady,
+      // Send full state to new player
+      if (callback) {
+        callback({
+          success: true,
+          playerId: socket.id,
+          roomId: cleanRoomId,
+          state: room.getState(),
         });
       }
+    } catch (err) {
+      console.error('Join error:', err);
+      if (callback) callback({ error: 'Failed to join room' });
     }
   });
 
-  // Disconnect
+  socket.on('player:move', (data) => {
+    const roomId = playerRoomMap.get(socket.id);
+    if (!roomId) return;
+    const room = gameRooms.get(roomId);
+    if (!room) return;
+
+    room.updatePlayerPosition(socket.id, data.x, data.z, data.rotation);
+    socket.to(roomId).emit('player:moved', {
+      id: socket.id, x: data.x, z: data.z, rotation: data.rotation,
+    });
+  });
+
+  socket.on('player:interact', (data) => {
+    const roomId = playerRoomMap.get(socket.id);
+    if (!roomId) return;
+    const room = gameRooms.get(roomId);
+    if (!room) return;
+
+    const result = room.handleInteraction(socket.id, data);
+    if (result) {
+      io.to(roomId).emit('interaction:result', result);
+    }
+  });
+
+  socket.on('game:start', () => {
+    const roomId = playerRoomMap.get(socket.id);
+    if (!roomId) return;
+    const room = gameRooms.get(roomId);
+    if (!room) return;
+
+    room.startGame();
+    io.to(roomId).emit('game:started', { timeLimit: room.timeLimit });
+  });
+
+  socket.on('player:chat', (data) => {
+    const roomId = playerRoomMap.get(socket.id);
+    if (!roomId) return;
+    io.to(roomId).emit('chat:message', {
+      id: socket.id,
+      name: playerRoomMap.get(socket.id)
+        ? gameRooms.get(roomId)?.getPlayer(socket.id)?.name
+        : 'Unknown',
+      message: data.message,
+      timestamp: Date.now(),
+    });
+  });
+
   socket.on('disconnect', () => {
-    console.log(`Player disconnected: ${socket.id}`);
-    if (currentRoom) {
-      gameState.removePlayer(currentRoom, socket.id);
-      io.to(currentRoom).emit('playerLeft', { playerId: socket.id });
-      socket.leave(currentRoom);
-    }
+    console.log(`[-] Player disconnected: ${socket.id}`);
+    leaveCurrentRoom(socket);
   });
 });
 
+function leaveCurrentRoom(socket) {
+  const roomId = playerRoomMap.get(socket.id);
+  if (!roomId) return;
+
+  const room = gameRooms.get(roomId);
+  if (room) {
+    room.removePlayer(socket.id);
+    socket.to(roomId).emit('player:left', { id: socket.id });
+
+    // Clean up empty rooms after 5 minutes
+    if (room.playerCount === 0) {
+      setTimeout(() => {
+        if (room.playerCount === 0) {
+          gameRooms.delete(roomId);
+          console.log(`[-] Room deleted: ${roomId}`);
+        }
+      }, 5 * 60 * 1000);
+    }
+  }
+
+  socket.leave(roomId);
+  playerRoomMap.delete(socket.id);
+}
+
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Coffee Shop Game server running on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`☕ Professional Coffee Shop Game running on port ${PORT}`);
+  console.log(`   Open http://localhost:${PORT}`);
 });
