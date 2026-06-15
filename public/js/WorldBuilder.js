@@ -316,4 +316,53 @@ export class WorldBuilder {
       group.add(sprite);
 
       // User data
-      group.userData = { id: s.id, type: 'ing
+      group.userData = { id: s.id, type: 'ing 
+        _createDecoration() {
+    // Hanging sign
+    const signMat = new THREE.MeshStandardMaterial({ color: 0x4E342E });
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 0.05), signMat);
+    sign.position.set(1, 2.8, -6.5);
+    this.scene.add(sign);
+
+    // Pot plants
+    const potMat = new THREE.MeshStandardMaterial({ color: 0x8D6E63 });
+    const plantMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });
+    [-6, 6].forEach(x => {
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.1, 0.2, 8), potMat);
+      pot.position.set(x, 3.8, -6.5);
+      this.scene.add(pot);
+      const plant = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), plantMat);
+      plant.position.set(x, 3.95, -6.5);
+      plant.scale.y = 1.3;
+      this.scene.add(plant);
+    });
+  }
+
+  _createTrash() {
+    const mat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.3, roughness: 0.5 });
+    const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 0.4, 12), mat);
+    bin.position.set(-5, 0.2, -3);
+    this.scene.add(bin);
+  }
+
+  _createCeilingLights() {
+    const glowMat = new THREE.MeshStandardMaterial({
+      color: 0xFFDD88,
+      emissive: 0xFFCC44,
+      emissiveIntensity: 0.3,
+    });
+    for (let x = -4; x <= 4; x += 3) {
+      const light = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), glowMat);
+      light.position.set(x, 3.8, 0);
+      this.scene.add(light);
+
+      const ptLight = new THREE.PointLight(0xFFDD88, 0.3, 5);
+      ptLight.position.set(x, 3.8, 0);
+      this.scene.add(ptLight);
+    }
+  }
+
+  getInteractables() {
+    return [...this.machines, ...this.ingredientStations];
+  }
+}
